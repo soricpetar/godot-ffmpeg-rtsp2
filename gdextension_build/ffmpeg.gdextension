@@ -1,7 +1,7 @@
 [configuration]
 
 entry_symbol = "ffmpeg_init"
-compatibility_minimum = 4.1
+compatibility_minimum = 4.2
 
 [libraries]
 windows.debug.x86_64 = "res://addons/ffmpeg/win64/libgdffmpeg.windows.template_debug.x86_64.dll"
@@ -13,6 +13,7 @@ linux.release.x86_64 = "res://addons/ffmpeg/linux64/libgdffmpeg.linux.template_r
 
 windows.x86_64 = 
     {"res://addons/ffmpeg/win64/avcodec-60.dll": "",
+    "res://addons/ffmpeg/win64/avdevice-60.dll": "",
     "res://addons/ffmpeg/win64/avfilter-9.dll": "",
     "res://addons/ffmpeg/win64/avformat-60.dll": "",
     "res://addons/ffmpeg/win64/avutil-58.dll": "",

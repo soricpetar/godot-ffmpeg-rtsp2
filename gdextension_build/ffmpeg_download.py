@@ -9,6 +9,7 @@ FFMPEG_DOWNLOAD_WIN64 = "https://github.com/EIRTeam/FFmpeg-Builds/releases/downl
 FFMPEG_DOWNLOAD_LINUX64 = "https://github.com/EIRTeam/FFmpeg-Builds/releases/download/autobuild-2023-07-24-08-52/ffmpeg-N-111611-g5b11ee9429-linux64-lgpl-godot.tar.xz"
 ffmpeg_versions = {
     "avcodec": "60",
+    # "avdevice": "60",
     "avfilter": "9",
     "avformat": "60",
     "avutil": "58",

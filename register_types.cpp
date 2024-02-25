@@ -39,8 +39,11 @@
 
 #include "ffmpeg_video_stream.h"
 #include "video_stream_ffmpeg_loader.h"
+#include "ffmpeg_audio_stream.h"
+#include "audio_stream_ffmpeg_loader.h"
 
-Ref<VideoStreamFFMpegLoader> ffmpeg_loader;
+Ref<VideoStreamFFMpegLoader> video_ffmpeg_loader;
+Ref<AudioStreamFFMpegLoader> audio_ffmpeg_loader;
 
 static void print_codecs() {
 	const AVCodecDescriptor *desc = NULL;
@@ -77,11 +80,19 @@ void initialize_ffmpeg_module(ModuleInitializationLevel p_level) {
 	GDREGISTER_ABSTRACT_CLASS(FFmpegVideoStreamPlayback);
 	GDREGISTER_ABSTRACT_CLASS(VideoStreamFFMpegLoader);
 	GDREGISTER_CLASS(FFmpegVideoStream);
-	ffmpeg_loader.instantiate();
+
+	GDREGISTER_ABSTRACT_CLASS(FFmpegAudioStreamPlayback);
+	GDREGISTER_ABSTRACT_CLASS(AudioStreamFFMpegLoader);
+	GDREGISTER_CLASS(FFmpegAudioStream);
+
+	video_ffmpeg_loader.instantiate();
+	audio_ffmpeg_loader.instantiate();
 #ifdef GDEXTENSION
-	ResourceLoader::get_singleton()->add_resource_format_loader(ffmpeg_loader);
+	ResourceLoader::get_singleton()->add_resource_format_loader(video_ffmpeg_loader);
+	ResourceLoader::get_singleton()->add_resource_format_loader(audio_ffmpeg_loader);
 #else
-	ResourceLoader::add_resource_format_loader(ffmpeg_loader);
+	ResourceLoader::add_resource_format_loader(video_ffmpeg_loader);
+	ResourceLoader::add_resource_format_loader(audio_ffmpeg_loader);
 #endif
 }
 
@@ -90,11 +101,14 @@ void uninitialize_ffmpeg_module(ModuleInitializationLevel p_level) {
 		return;
 	}
 #ifdef GDEXTENSION
-	ResourceLoader::get_singleton()->remove_resource_format_loader(ffmpeg_loader);
+	ResourceLoader::get_singleton()->remove_resource_format_loader(video_ffmpeg_loader);
+	ResourceLoader::get_singleton()->remove_resource_format_loader(audio_ffmpeg_loader);
 #else
-	ResourceLoader::remove_resource_format_loader(ffmpeg_loader);
+	ResourceLoader::remove_resource_format_loader(video_ffmpeg_loader);
+	ResourceLoader::remove_resource_format_loader(audio_ffmpeg_loader);
 #endif
-	ffmpeg_loader.unref();
+	video_ffmpeg_loader.unref();
+	audio_ffmpeg_loader.unref();
 }
 
 #ifdef GDEXTENSION

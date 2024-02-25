@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  ffmpeg_video_stream.h                                                 */
+/*  ffmpeg_audio_stream.h                                                 */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             EIRTeam.FFmpeg                             */
@@ -28,14 +28,16 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef ET_VIDEO_STREAM_H
-#define ET_VIDEO_STREAM_H
+#ifndef ET_AUDIO_STREAM_H
+#define ET_AUDIO_STREAM_H
 
 #ifdef GDEXTENSION
 
 // Headers for building as GDExtension plug-in.
-#include <godot_cpp/classes/video_stream.hpp>
-#include <godot_cpp/classes/video_stream_playback.hpp>
+#include <godot_cpp/classes/audio_stream.hpp>
+#include <godot_cpp/classes/audio_frame.hpp>
+#include <godot_cpp/classes/audio_stream_playback.hpp>
+#include <godot_cpp/classes/audio_stream_playback_resampled.hpp>
 #include <godot_cpp/godot.hpp>
 #include <godot_cpp/templates/list.hpp>
 #include <godot_cpp/templates/vector.hpp>
@@ -45,103 +47,134 @@ using namespace godot;
 #else
 
 #include "core/object/ref_counted.h"
-#include "scene/resources/video_stream.h"
+#include "servers/audio/audio_stream.h"
 
 #endif
 
-#include "video_decoder.h"
+#include "audio_decoder.h"
 
 // We have to use this function redirection system for GDExtension because the naming conventions
 // for the functions we are supposed to override are different there
 
 #include "gdextension_build/func_redirect.h"
-class FFmpegVideoStreamPlayback : public VideoStreamPlayback {
-	GDCLASS(FFmpegVideoStreamPlayback, VideoStreamPlayback);
+class FFmpegAudioStreamPlayback : public AudioStreamPlaybackResampled {
+	GDCLASS(FFmpegAudioStreamPlayback, AudioStreamPlaybackResampled);
 	const int LENIENCE_BEFORE_SEEK = 2500;
 	double playback_position = 0.0f;
+	double last_playback_position = 0.0f;
 
-	Ref<VideoDecoder> decoder;
-	List<Ref<DecodedFrame>> available_frames;
+	Ref<AudioDecoder> decoder;
 	List<Ref<DecodedAudioFrame>> available_audio_frames;
-	Ref<DecodedFrame> last_frame;
-#ifndef FFMPEG_MT_GPU_UPLOAD
-	Ref<ImageTexture> last_frame_texture;
-#endif
-	Ref<Image> last_frame_image;
-	Ref<ImageTexture> texture;
+	Ref<DecodedAudioFrame> last_frame;
+	int frame_read_pos = 0;
+	int frame_read_len = 0;
 	bool looping = false;
 	bool buffering = false;
 	int frames_processed = 0;
 	void seek_into_sync();
 	double get_current_frame_time();
-	bool check_next_frame_valid(Ref<DecodedFrame> p_decoded_frame);
 	bool check_next_audio_frame_valid(Ref<DecodedAudioFrame> p_decoded_frame);
-	bool paused = false;
 	bool playing = false;
+	int loop_count = 0;
+
+	friend class FFmpegAudioStream;
+	Ref<FFmpegAudioStream> stream;
 
 private:
-	bool is_paused_internal() const;
-	void update_internal(double p_delta);
-	bool is_playing_internal() const;
-	void set_paused_internal(bool p_paused);
-	void play_internal();
+	void start_internal(double p_time);
 	void stop_internal();
-	void seek_internal(double p_time);
-	double get_length_internal() const;
-	Ref<Texture2D> get_texture_internal() const;
+	bool is_playing_internal() const;
+	int get_loop_count_internal() const;
 	double get_playback_position_internal() const;
+	void seek_internal(double p_time);
+	void tag_used_streams_internal();
+
+	double get_length_internal() const;
 	int get_mix_rate_internal() const;
 	int get_channels_internal() const;
 
+	void update_internal(double p_delta);
+
 protected:
 	void clear();
-	static void _bind_methods(){}; // Required by GDExtension, do not remove
+
+	static void _bind_methods(){
+		ClassDB::bind_method(D_METHOD("get_length"), &FFmpegAudioStreamPlayback::get_length_internal);
+		ClassDB::bind_method(D_METHOD("get_mix_rate"), &FFmpegAudioStreamPlayback::get_mix_rate_internal);
+		ClassDB::bind_method(D_METHOD("get_channels"), &FFmpegAudioStreamPlayback::get_channels_internal);
+	}; // Required by GDExtension, do not remove
 
 public:
 	void load(Ref<FileAccess> p_file_access);
 	void load_from_url(const String &p_path);
 	
-	STREAM_FUNC_REDIRECT_0_CONST(bool, is_paused);
-	STREAM_FUNC_REDIRECT_1(void, update, double, p_delta);
-	STREAM_FUNC_REDIRECT_0_CONST(bool, is_playing);
-	STREAM_FUNC_REDIRECT_1(void, set_paused, bool, p_paused);
-	STREAM_FUNC_REDIRECT_0(void, play);
+	STREAM_FUNC_REDIRECT_1(void, start, double, p_time);
 	STREAM_FUNC_REDIRECT_0(void, stop);
-	STREAM_FUNC_REDIRECT_1(void, seek, double, p_time);
-	STREAM_FUNC_REDIRECT_0_CONST(double, get_length);
-	STREAM_FUNC_REDIRECT_0_CONST(Ref<Texture2D>, get_texture);
+	STREAM_FUNC_REDIRECT_0_CONST(bool, is_playing);
+	STREAM_FUNC_REDIRECT_0_CONST(int, get_loop_count);
 	STREAM_FUNC_REDIRECT_0_CONST(double, get_playback_position);
-	STREAM_FUNC_REDIRECT_0_CONST(int, get_mix_rate);
-	STREAM_FUNC_REDIRECT_0_CONST(int, get_channels);
-	FFmpegVideoStreamPlayback();
+	STREAM_FUNC_REDIRECT_1(void, seek, double, p_time);
+	STREAM_FUNC_REDIRECT_0(void, tag_used_streams);
+
+	// int _mix(AudioFrame *p_buffer, float p_rate_scale, int p_frames);
+	FFmpegAudioStreamPlayback();
+	int _mix_resampled(AudioFrame *p_buffer, int p_frames);
+	float _get_stream_sampling_rate();
+	
 };
 
-class FFmpegVideoStream : public VideoStream {
-	GDCLASS(FFmpegVideoStream, VideoStream);
+class FFmpegAudioStream : public AudioStream {
+	GDCLASS(FFmpegAudioStream, AudioStream);
 
 protected:
-	static void _bind_methods(){}; // Required by GDExtension, do not remove
-	Ref<VideoStreamPlayback> instantiate_playback_internal() {
+	String file;
+	
+	static void _bind_methods(){
+		ClassDB::bind_method(D_METHOD("set_file", "file"), &FFmpegAudioStream::set_file);
+		ClassDB::bind_method(D_METHOD("get_file"), &FFmpegAudioStream::get_file);
+
+		ADD_PROPERTY(PropertyInfo(Variant::STRING, "file"), "set_file", "get_file");
+
+	}; // Required by GDExtension, do not remove
+
+public:
+	double length=0.0f;
+	void set_file(const String &p_file) {
+		file = p_file;
+		emit_changed();
+	}
+
+	String get_file() {
+		return file;
+	}
+
+	double _get_length(){
+		return length;
+	}
+
+	Ref<AudioStreamPlayback> _instantiate_playback() {
 		String file_path = get_file();
 		if(file_path.to_lower().begins_with("http://") || file_path.to_lower().begins_with("https://")){
-			Ref<FFmpegVideoStreamPlayback> pb;
+			Ref<FFmpegAudioStreamPlayback> pb;
+			
 			pb.instantiate();
+			pb->stream = Ref<FFmpegAudioStream>(this);
 			pb->load_from_url(file_path);
 			return pb;
 		}else{
 			Ref<FileAccess> fa = FileAccess::open(file_path, FileAccess::READ);
 			if (!fa.is_valid()) {
-				return Ref<VideoStreamPlayback>();
+				return Ref<AudioStreamPlayback>();
 			}
-			Ref<FFmpegVideoStreamPlayback> pb;
+			Ref<FFmpegAudioStreamPlayback> pb;
 			pb.instantiate();
+			pb->stream = Ref<FFmpegAudioStream>(this);
 			pb->load(fa);
 			return pb;
 		}
 	}
 
-public:
-	STREAM_FUNC_REDIRECT_0(Ref<VideoStreamPlayback>, instantiate_playback);
+	// STREAM_FUNC_REDIRECT_0(Ref<AudioStreamPlayback>, instantiate_playback);
 };
 
-#endif // ET_VIDEO_STREAM_H
+#endif // ET_AUDIO_STREAM_H
