@@ -56,10 +56,12 @@ double FFmpegVideoStreamPlayback::get_current_frame_time() {
 
 bool FFmpegVideoStreamPlayback::check_next_frame_valid(Ref<DecodedFrame> p_decoded_frame) {
 	// in the case of looping, we may start a seek back to the beginning but still receive some lingering frames from the end of the last loop. these should be allowed to continue playing.
-	if (looping && Math::abs((p_decoded_frame->get_time() - decoder->get_duration()) - playback_position) < LENIENCE_BEFORE_SEEK)
-		return true;
+	// if (looping && Math::abs((p_decoded_frame->get_time() - decoder->get_duration()) - playback_position) < LENIENCE_BEFORE_SEEK)
+	// 	return true;
 
-	return p_decoded_frame->get_time() <= playback_position && Math::abs(p_decoded_frame->get_time() - playback_position) < LENIENCE_BEFORE_SEEK;
+	// return p_decoded_frame->get_time() <= playback_position && Math::abs(p_decoded_frame->get_time() - playback_position) < LENIENCE_BEFORE_SEEK;
+	//@DEBUG IVAN
+	return true;
 }
 
 bool FFmpegVideoStreamPlayback::check_next_audio_frame_valid(Ref<DecodedAudioFrame> p_decoded_frame) {
@@ -80,14 +82,15 @@ void FFmpegVideoStreamPlayback::update_internal(double p_delta) {
 	}
 	playback_position += p_delta * 1000.0f;
 
-	if (decoder->get_decoder_state() == VideoDecoder::DecoderState::END_OF_STREAM && available_frames.size() == 0) {
-		// if at the end of the stream but our playback enters a valid time region again, a seek operation is required to get the decoder back on track.
-		if (playback_position < decoder->get_last_decoded_frame_time()) {
-			seek_into_sync();
-		} else {
-			playing = false;
-		}
-	}
+//#DEBUG
+	// if (decoder->get_decoder_state() == VideoDecoder::DecoderState::END_OF_STREAM && available_frames.size() == 0) {
+	// 	// if at the end of the stream but our playback enters a valid time region again, a seek operation is required to get the decoder back on track.
+	// 	if (playback_position < decoder->get_last_decoded_frame_time()) {
+	// 		seek_into_sync();
+	// 	} else {
+	// 		playing = false;
+	// 	}
+	// }
 
 	Ref<DecodedFrame> peek_frame = available_frames.size() > 0 ? available_frames[0] : nullptr;
 	bool out_of_sync = false;
@@ -102,7 +105,9 @@ void FFmpegVideoStreamPlayback::update_internal(double p_delta) {
 	}
 
 	if (out_of_sync) {
-		seek_into_sync();
+		//seek_into_sync();
+		//@DEBUG
+		print_line("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!syncing");
 	}
 
 	double frame_time = get_current_frame_time();

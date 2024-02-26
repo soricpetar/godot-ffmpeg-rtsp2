@@ -126,16 +126,19 @@ void VideoDecoder::prepare_decoding() {
 		av_dict_set(&opts, "hwaccel", "auto", 0);
 		av_dict_set(&opts, "movflags", "faststart", 0);
 		av_dict_set(&opts, "refcounted_frames", "1", 0);
+		print_line("Trying to open file");
 		open_input_res = avformat_open_input(&format_context, "dummy", nullptr, &opts);
 		av_dict_free(&opts);
 	}else if (!video_path.is_empty()){
 		avformat_network_init();
 		format_context = avformat_alloc_context();
+		format_context->flags |= AVFMT_FLAG_GENPTS | AVFMT_FLAG_NOBUFFER | AVFMT_FLAG_DISCARD_CORRUPT; 
 		AVDictionary* opts = nullptr;
-		av_dict_set(&opts, "buffer_size", "655360", 0);
+		av_dict_set(&opts, "buffer_size", "320000", 0);
 		av_dict_set(&opts, "hwaccel", "auto", 0);
-		av_dict_set(&opts, "movflags", "faststart", 0);
-		av_dict_set(&opts, "refcounted_frames", "1", 0);
+		//av_dict_set(&opts, "movflags", "faststart", 0);
+		//av_dict_set(&opts, "refcounted_frames", "1", 0);
+		print_line("Trying to open url:", video_path.ascii().get_data());
 
 		open_input_res = avformat_open_input(&format_context, video_path.utf8().get_data(), nullptr, &opts);
 		av_dict_free(&opts);
@@ -152,10 +155,16 @@ void VideoDecoder::prepare_decoding() {
 
 	video_stream = format_context->streams[stream_index];
 	video_time_base_in_seconds = video_stream->time_base.num / (double)video_stream->time_base.den;
+	print_line("Time base:", video_time_base_in_seconds);
 	if (video_stream->duration > 0) {
 		duration = video_stream->duration * video_time_base_in_seconds * 1000.0;
 	} else {
 		duration = format_context->duration / (double)AV_TIME_BASE * 1000.0;
+	}
+
+	//@DEBUG
+	if (duration < 0) {
+		duration = 10000000;
 	}
 
 	int audio_stream_index = av_find_best_stream(format_context, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
@@ -179,6 +188,10 @@ void VideoDecoder::recreate_codec_context() {
 		}
 		video_codec_context = avcodec_alloc_context3(info.codec->get_codec_ptr());
 		video_codec_context->pkt_timebase = video_stream->time_base;
+		
+		//DEBUG
+		video_codec_context->has_b_frames = false;
+		video_codec_context->flags |= AV_CODEC_FLAG_LOW_DELAY;
 
 		ERR_CONTINUE_MSG(video_codec_context == nullptr, vformat("Couldn't allocate codec context: %s", info.codec->get_codec_ptr()->name));
 

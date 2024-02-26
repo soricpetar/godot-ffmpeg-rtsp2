@@ -39,6 +39,7 @@
 #include <godot_cpp/godot.hpp>
 #include <godot_cpp/templates/list.hpp>
 #include <godot_cpp/templates/vector.hpp>
+#include "gdextension_build/gdex_print.h"
 
 using namespace godot;
 
@@ -123,10 +124,11 @@ protected:
 	static void _bind_methods(){}; // Required by GDExtension, do not remove
 	Ref<VideoStreamPlayback> instantiate_playback_internal() {
 		String file_path = get_file();
-		if(file_path.to_lower().begins_with("http://") || file_path.to_lower().begins_with("https://")){
+		if(std::string::npos != file_path.to_lower().find("://")){
 			Ref<FFmpegVideoStreamPlayback> pb;
 			pb.instantiate();
 			pb->load_from_url(file_path);
+			print_line("Loading from URL");
 			return pb;
 		}else{
 			Ref<FileAccess> fa = FileAccess::open(file_path, FileAccess::READ);

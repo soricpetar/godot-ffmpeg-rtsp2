@@ -59,7 +59,7 @@ String AudioStreamFFMpegLoader::get_resource_type_internal(const String &p_path)
 }
 
 Ref<Resource> AudioStreamFFMpegLoader::load_internal(const String &p_path, const String &p_original_path, Error *r_error, bool p_use_sub_threads, float *r_progress, CacheMode p_cache_mode) const {
-	if (p_path.to_lower().begins_with("http://") || p_path.to_lower().begins_with("https://")) {
+	if (std::string::npos != p_path.to_lower().find("//")) {
 		
 	} else{
 		Ref<FileAccess> f = FileAccess::open(p_path, FileAccess::READ);

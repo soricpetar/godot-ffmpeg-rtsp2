@@ -52,7 +52,7 @@ int FFmpegAudioStreamPlayback::_mix_resampled(AudioFrame *p_buffer, int p_frames
 	}
 	int pos = 0;
 	while(pos!=p_frames){
-		p_buffer[pos++] = AudioFrame(0.0f, 0.0f);
+		p_buffer[pos++] = AudioFrame{0.0f, 0.0f};
 	}
 	playback_position += 0.1 * 1000.0f;
 
@@ -101,7 +101,7 @@ int FFmpegAudioStreamPlayback::_mix_resampled(AudioFrame *p_buffer, int p_frames
 		while(frame_read_pos<sample_count){
 			float frame_read_buffer_left = audio_frame->get_sample_data()[frame_read_pos*2];
 			float frame_read_buffer_right = audio_frame->get_sample_data()[frame_read_pos*2+1];
-			p_buffer[pos++] = AudioFrame(frame_read_buffer_left, frame_read_buffer_right);
+			p_buffer[pos++] = AudioFrame{frame_read_buffer_left, frame_read_buffer_right};
 			frame_read_pos++;
 			if(pos==p_frames){
 				break;
@@ -133,7 +133,7 @@ int FFmpegAudioStreamPlayback::_mix_resampled(AudioFrame *p_buffer, int p_frames
 		frames_processed++;
 	}
 	while(pos!=p_frames){
-		p_buffer[pos++] = AudioFrame(0.0f, 0.0f);
+		p_buffer[pos++] = AudioFrame{0.0f, 0.0f};
 	}
 	if(update_playback_position && last_playback_position!=0.0){
 		playback_position = last_playback_position;

@@ -36,12 +36,14 @@
 // Headers for building as GDExtension plug-in.
 #include <godot_cpp/classes/resource.hpp>
 #include <godot_cpp/classes/resource_format_loader.hpp>
+#include "gdextension_build/gdex_print.h"
 
 using namespace godot;
 
 #else
 
 #include "core/io/resource_loader.h"
+
 
 #endif
 
