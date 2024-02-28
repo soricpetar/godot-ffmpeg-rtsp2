@@ -136,6 +136,7 @@ void VideoDecoder::prepare_decoding() {
 		AVDictionary* opts = nullptr;
 		av_dict_set(&opts, "buffer_size", "320000", 0);
 		av_dict_set(&opts, "hwaccel", "auto", 0);
+		av_dict_set(&opts, "timeout", "2000", 0); // add an entry 
 		//av_dict_set(&opts, "movflags", "faststart", 0);
 		//av_dict_set(&opts, "refcounted_frames", "1", 0);
 		print_line("Trying to open url:", video_path.ascii().get_data());
