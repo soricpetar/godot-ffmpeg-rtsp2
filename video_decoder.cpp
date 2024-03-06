@@ -132,12 +132,13 @@ void VideoDecoder::prepare_decoding() {
 	}else if (!video_path.is_empty()){
 		avformat_network_init();
 		format_context = avformat_alloc_context();
-		format_context->flags |= AVFMT_FLAG_GENPTS | AVFMT_FLAG_NOBUFFER | AVFMT_FLAG_DISCARD_CORRUPT; 
+		format_context->flags |= AVFMT_FLAG_GENPTS | AVFMT_FLAG_NOBUFFER | AVFMT_FLAG_DISCARD_CORRUPT | AVFMT_FLAG_NONBLOCK; 
 		AVDictionary* opts = nullptr;
-		av_dict_set(&opts, "buffer_size", "320000", 0);
+		av_dict_set(&opts, "buffer_size", "655360", 0);
 		av_dict_set(&opts, "hwaccel", "auto", 0);
-		av_dict_set(&opts, "timeout", "2000", 0); // add an entry 
-		//av_dict_set(&opts, "movflags", "faststart", 0);
+		av_dict_set_int(&opts, "tcp_nodelay", 1, 0);
+		av_dict_set(&opts, "timeout", "3500", 0);
+		av_dict_set(&opts, "movflags", "faststart", 0);
 		//av_dict_set(&opts, "refcounted_frames", "1", 0);
 		print_line("Trying to open url:", video_path.ascii().get_data());
 
@@ -592,6 +593,24 @@ void VideoDecoder::_scaler_frame_return(Ref<VideoDecoder> p_decoder, Ref<FFmpegF
 
 Ref<FFmpegFrame> VideoDecoder::_ensure_frame_pixel_format(Ref<FFmpegFrame> p_frame, AVPixelFormat p_target_pixel_format) {
 	ZoneScopedN("Video decoder rescale");
+	AVPixelFormat pixFormat;
+	switch (p_frame->get_frame()->format) {
+		case AV_PIX_FMT_YUVJ420P:
+			p_frame->get_frame()->format = AV_PIX_FMT_YUV420P;
+			break;
+		case AV_PIX_FMT_YUVJ422P:
+			p_frame->get_frame()->format = AV_PIX_FMT_YUV422P;
+			break;
+		case AV_PIX_FMT_YUVJ444P:
+			p_frame->get_frame()->format = AV_PIX_FMT_YUV444P;
+			break;
+		case AV_PIX_FMT_YUVJ440P:
+			p_frame->get_frame()->format = AV_PIX_FMT_YUV440P;
+			break;
+		default:
+			break;
+	}
+	
 	if (p_frame->get_frame()->format == p_target_pixel_format) {
 		return p_frame;
 	}
