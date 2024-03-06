@@ -139,6 +139,10 @@ void VideoDecoder::prepare_decoding() {
 		av_dict_set_int(&opts, "tcp_nodelay", 1, 0);
 		av_dict_set(&opts, "timeout", "3500", 0);
 		av_dict_set(&opts, "movflags", "faststart", 0);
+
+		// This works better over VPN interestingly enough
+		av_dict_set(&opts, "rtsp_transport", "tcp", 0);
+		av_dict_set(&opts, "rtsp_flags", "prefer_tcp", 0);
 		//av_dict_set(&opts, "refcounted_frames", "1", 0);
 		print_line("Trying to open url:", video_path.ascii().get_data());
 
