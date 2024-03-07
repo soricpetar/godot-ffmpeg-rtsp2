@@ -42,6 +42,10 @@ extern "C" {
 #include "libavformat/avio.h"
 }
 
+#include <chrono>
+
+using namespace std::chrono;
+
 const int MAX_PENDING_FRAMES = 3;
 
 bool is_hardware_pixel_format(AVPixelFormat p_fmt) {
@@ -111,6 +115,30 @@ int64_t VideoDecoder::_stream_seek_callback(void *p_opaque, int64_t p_offset, in
 	return decoder->video_file->get_position();
 }
 
+// Ok I know this is ugly but this provides a timeout to the asynch connection
+auto ms = duration_cast<milliseconds>(
+			system_clock::now().time_since_epoch()).count();
+
+static int interrupt_cb(void *ctx) 
+{ 
+	bool* ok = reinterpret_cast<bool*>(ctx);
+	if(!*ok)
+	{
+		auto cur = duration_cast<milliseconds>(
+			system_clock::now().time_since_epoch()).count();
+		if (cur-ms > 3000)
+		{
+			return 1;
+		}
+	}
+	
+// do something 
+    return 0;
+} 
+
+static bool ok = false;
+static const AVIOInterruptCB int_cb = { interrupt_cb, NULL }; 
+
 void VideoDecoder::prepare_decoding() {
 	int open_input_res;
 	if(!video_file.is_null()){
@@ -136,9 +164,12 @@ void VideoDecoder::prepare_decoding() {
 		AVDictionary* opts = nullptr;
 		av_dict_set(&opts, "buffer_size", "655360", 0);
 		av_dict_set(&opts, "hwaccel", "auto", 0);
-		av_dict_set_int(&opts, "tcp_nodelay", 1, 0);
-		av_dict_set(&opts, "timeout", "3500", 0);
-		av_dict_set(&opts, "movflags", "faststart", 0);
+		av_dict_set(&opts, "tcp_nodelay", "1", 0);
+		// these seem to do absolutely nothing useful
+		av_dict_set(&opts, "rw_timeout", "3500000", 0);
+		av_dict_set(&opts, "stimeout", "2000000", 0); // in secs
+		av_dict_set(&opts, "timeout", "2", 0); // in secs
+
 
 		// This works better over VPN interestingly enough
 		av_dict_set(&opts, "rtsp_transport", "tcp", 0);
@@ -146,7 +177,14 @@ void VideoDecoder::prepare_decoding() {
 		//av_dict_set(&opts, "refcounted_frames", "1", 0);
 		print_line("Trying to open url:", video_path.ascii().get_data());
 
+		format_context->interrupt_callback = int_cb;
+		format_context->interrupt_callback.opaque = &ok;
+		ms = duration_cast<milliseconds>(
+				system_clock::now().time_since_epoch())
+					 .count();
+		ok = false;
 		open_input_res = avformat_open_input(&format_context, video_path.utf8().get_data(), nullptr, &opts);
+		ok = true;
 		av_dict_free(&opts);
 	}
 
@@ -161,7 +199,7 @@ void VideoDecoder::prepare_decoding() {
 
 	video_stream = format_context->streams[stream_index];
 	video_time_base_in_seconds = video_stream->time_base.num / (double)video_stream->time_base.den;
-	print_line("Time base:", video_time_base_in_seconds);
+	//print_line("Time base:", video_time_base_in_seconds);
 	if (video_stream->duration > 0) {
 		duration = video_stream->duration * video_time_base_in_seconds * 1000.0;
 	} else {
@@ -196,7 +234,7 @@ void VideoDecoder::recreate_codec_context() {
 		video_codec_context->pkt_timebase = video_stream->time_base;
 		
 		//DEBUG
-		video_codec_context->has_b_frames = false;
+		//video_codec_context->has_b_frames = false;
 		video_codec_context->flags |= AV_CODEC_FLAG_LOW_DELAY;
 
 		ERR_CONTINUE_MSG(video_codec_context == nullptr, vformat("Couldn't allocate codec context: %s", info.codec->get_codec_ptr()->name));

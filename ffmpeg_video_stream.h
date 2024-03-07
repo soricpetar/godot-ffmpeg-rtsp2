@@ -128,7 +128,6 @@ protected:
 			Ref<FFmpegVideoStreamPlayback> pb;
 			pb.instantiate();
 			pb->load_from_url(file_path);
-			print_line("Loading from URL");
 			return pb;
 		}else{
 			Ref<FileAccess> fa = FileAccess::open(file_path, FileAccess::READ);
