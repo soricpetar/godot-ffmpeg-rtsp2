@@ -126,7 +126,7 @@ static int interrupt_cb(void *ctx)
 	{
 		auto cur = duration_cast<milliseconds>(
 			system_clock::now().time_since_epoch()).count();
-		if (cur-ms > 3000)
+		if (cur-ms > 10000)
 		{
 			return 1;
 		}
